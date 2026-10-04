@@ -10,8 +10,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/words", (req, res) => {
-  const rows = db.prepare("SELECT * FROM words").all();
-
+const rows = db.prepare("SELECT * FROM words ORDER BY createdAt DESC").all();
   const words = rows.map(row => ({
     ...row,
     forms: JSON.parse(row.forms),
