@@ -33,6 +33,16 @@ app.post("/words", (req, res) => {
   res.status(201).json(w);
 });
 
+app.delete("/words/:id", (req, res) => {
+  const result = db.prepare("DELETE FROM words WHERE id = ?").run(req.params.id);
+
+  if (result.changes === 0) {
+    return res.status(404).json({ error: "Word not found" });
+  }
+
+  res.status(204).end();
+});
+
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000");
 });
