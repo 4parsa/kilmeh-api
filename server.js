@@ -22,7 +22,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/words", (req, res) => {
-const rows = db.prepare("SELECT * FROM words ORDER BY createdAt DESC").all();
+  const rows = db.prepare("SELECT * FROM words ORDER BY createdAt DESC").all();
   const words = rows.map(row => ({
     ...row,
     forms: JSON.parse(row.forms),
@@ -32,7 +32,8 @@ const rows = db.prepare("SELECT * FROM words ORDER BY createdAt DESC").all();
   res.json(words);
 });
 
-app.post("/words", requireAuth, (req, res) => {  const w = req.body;
+app.post("/words", requireAuth, (req, res) => {
+  const w = req.body;
 
   db.prepare(`
     INSERT INTO words (id, type, english, arabic, translit, forms, notes, tags, createdAt)
@@ -45,7 +46,29 @@ app.post("/words", requireAuth, (req, res) => {  const w = req.body;
   res.status(201).json(w);
 });
 
-app.delete("/words/:id", requireAuth, (req, res) => {  const result = db.prepare("DELETE FROM words WHERE id = ?").run(req.params.id);
+app.post("/words/batch", requireAuth, (req, res) => {
+  const list = req.body;
+
+  const insert = db.prepare(`
+    INSERT INTO words (id, type, english, arabic, translit, forms, notes, tags, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const insertAll = db.transaction(items => {
+    for (const w of items) {
+      insert.run(
+        w.id, w.type, w.english, w.arabic, w.translit,
+        JSON.stringify(w.forms), w.notes, JSON.stringify(w.tags), w.createdAt
+      );
+    }
+  });
+
+  insertAll(list);
+  res.status(201).json({ added: list.length });
+});
+
+app.delete("/words/:id", requireAuth, (req, res) => {
+  const result = db.prepare("DELETE FROM words WHERE id = ?").run(req.params.id);
 
   if (result.changes === 0) {
     return res.status(404).json({ error: "Word not found" });
@@ -54,7 +77,8 @@ app.delete("/words/:id", requireAuth, (req, res) => {  const result = db.prepare
   res.status(204).end();
 });
 
-app.put("/words/:id", requireAuth, (req, res) => {  const w = req.body;
+app.put("/words/:id", requireAuth, (req, res) => {
+  const w = req.body;
 
   const result = db.prepare(`
     UPDATE words
