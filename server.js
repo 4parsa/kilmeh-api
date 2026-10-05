@@ -2,8 +2,20 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const db = require("./db");
-app.use(cors());
+app.use(cors({
+  origin: ["https://4parsa.github.io", "http://127.0.0.1:5500"]
+}));
 app.use(express.json());
+
+function requireAuth(req, res, next) {
+  const expected = `Bearer ${process.env.API_TOKEN}`;
+
+  if (!process.env.API_TOKEN || req.headers.authorization !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  next();
+}
 
 app.get("/", (req, res) => {
   res.send("Kilmeh API is alive");
@@ -20,8 +32,7 @@ const rows = db.prepare("SELECT * FROM words ORDER BY createdAt DESC").all();
   res.json(words);
 });
 
-app.post("/words", (req, res) => {
-  const w = req.body;
+app.post("/words", requireAuth, (req, res) => {  const w = req.body;
 
   db.prepare(`
     INSERT INTO words (id, type, english, arabic, translit, forms, notes, tags, createdAt)
@@ -34,8 +45,7 @@ app.post("/words", (req, res) => {
   res.status(201).json(w);
 });
 
-app.delete("/words/:id", (req, res) => {
-  const result = db.prepare("DELETE FROM words WHERE id = ?").run(req.params.id);
+app.delete("/words/:id", requireAuth, (req, res) => {  const result = db.prepare("DELETE FROM words WHERE id = ?").run(req.params.id);
 
   if (result.changes === 0) {
     return res.status(404).json({ error: "Word not found" });
@@ -44,8 +54,7 @@ app.delete("/words/:id", (req, res) => {
   res.status(204).end();
 });
 
-app.put("/words/:id", (req, res) => {
-  const w = req.body;
+app.put("/words/:id", requireAuth, (req, res) => {  const w = req.body;
 
   const result = db.prepare(`
     UPDATE words
